@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Jujitsu Defense</title>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-dark:#0b0a14;
+    --mat-blue:#0a3d62;
+    --mat-blue-light:#136ba3;
+    --gi-white:#f4f1ea;
+    --gold-belt:#ffcf5a;
+    --panel:#15112a;
+    --accent:#5ee7ff;
+    --danger:#ff4d6d;
+    --text:#eef3ee;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:radial-gradient(circle at 50% 0%, #2a1c52, var(--bg-dark));
+    color:var(--text);
+    font-family:'Zen Kaku Gothic New','Segoe UI',Tahoma,sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:16px;
+  }
+  h1{
+    margin:4px 0 2px;
+    font-size:26px;
+    letter-spacing:1px;
+    color:var(--gold-belt);
+    font-family:'Dela Gothic One',Impact,sans-serif;text-shadow:0 0 18px rgba(139,92,246,.8),0 2px 6px rgba(0,0,0,.6);
+  }
+  .subtitle{
+    margin:0 0 12px;
+    font-size:13px;
+    color:#a79fc7;
+  }
+  .game-wrap{
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+    justify-content:center;
+    max-width:1100px;
+  }
+  #gameCanvas{
+    background:var(--mat-blue);
+    border:4px solid #3a2f66;
+    border-radius:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.5);
+    cursor:crosshair;max-width:100%;height:auto;
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid #2e2552;
+    border-radius:10px;
+    padding:14px;
+    width:300px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    max-height:640px;
+  }
+  .tower-list{
+    max-height:280px;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    padding-right:4px;
+  }
+  .tower-list::-webkit-scrollbar{width:8px;}
+  .tower-list::-webkit-scrollbar-thumb{background:#3a2f66; border-radius:4px;}
+  .tower-list::-webkit-scrollbar-track{background:#0e0b1f;}
+  .stat-row{
+    display:flex;
+    justify-content:space-between;
+    font-size:14px;
+    background:#0e0b1f;
+    padding:6px 10px;
+    border-radius:6px;
+  }
+  .stat-row span:first-child{color:#a79fc7;}
+  .stat-row span:last-child{font-weight:bold;}
+  #hp{color:var(--danger);}
+  #gold{color:var(--gold-belt);}
+  #wave{color:var(--accent);}
+  button{
+    font-family:inherit;
+    border:none;
+    border-radius:8px;
+    padding:10px;
+    cursor:pointer;
+    font-size:14px;
+    font-weight:600;
+    transition:transform .1s, filter .1s;
+  }
+  button:active{transform:scale(0.97);}
+  button:disabled{opacity:0.4; cursor:not-allowed;}
+  #startWaveBtn{
+    background:var(--accent);
+    color:#10082a;
+  }
+  #startWaveBtn:hover:not(:disabled){filter:brightness(1.1);}
+  .tower-btn{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:2px;
+    background:#211a40;
+    color:var(--text);
+    border:2px solid #3a2f66;
+    text-align:left;
+  }
+  .tower-btn.selected{
+    border-color:var(--gold-belt);
+    background:#33285c;
+  }
+  .tower-btn:hover:not(:disabled){
+    border-color:var(--accent);
+  }
+  .tower-name{font-size:14px; font-weight:700;}
+  .tower-info{font-size:11px; color:#b3acd1;}
+  .section-label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:#8a82b0;
+    margin-top:4px;
+    border-bottom:1px solid #2e2552;
+    padding-bottom:4px;
+  }
+  #selectedInfo{
+    font-size:12px;
+    color:#d3cee8;
+    min-height:34px;
+    line-height:1.4;
+  }
+  #sellBtn{
+    background:var(--danger);
+    color:white;
+    display:none;
+  }
+  #upgradeBtn{
+    background:var(--gold-belt);
+    color:#332200;
+    display:none;
+  }
+  #overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(5,10,8,0.85);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    z-index:10;
+    text-align:center;
+  }
+  #overlay h2{
+    font-size:34px;
+    margin-bottom:6px;
+  }
+  #overlay p{
+    color:#c4bfe0;
+    margin-bottom:18px;
+  }
+  #restartBtn{
+    background:var(--gold-belt);
+    color:#332200;
+    padding:12px 28px;
+    font-size:16px;
+  }
+  .footer-note{
+    font-size:11px;
+    color:#6f6896;
+    margin-top:10px;
+    max-width:600px;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<h1>👁️ Jujitsu Defense</h1>
+<p class="subtitle">Sorcerers guard the school gate — summon fighters to hold back the curses</p>
+
+<div class="game-wrap">
+  <canvas id="gameCanvas" width="720" height="560"></canvas>
+
+  <div class="panel">
+    <div class="stat-row"><span>Cursed Energy</span><span id="gold">150</span></div>
+    <div class="stat-row"><span>School Barrier HP</span><span id="hp">20</span></div>
+    <div class="stat-row"><span>Round</span><span id="wave">0 / 15</span></div>
+
+    <button id="startWaveBtn">▶ Start Next Round</button>
+
+    <div class="section-label">Summon a Sorcerer</div>
+    <div class="tower-list" id="towerList"></div>
+
+    <div class="section-label">Selected Tower</div>
+    <div id="selectedInfo">Click a summoned sorcerer to inspect.</div>
+    <button id="upgradeBtn">⬆ Upgrade</button>
+    <button id="sellBtn">💰 Sell</button>
+  </div>
+</div>
+
+<p class="footer-note">Waves of curses creep down the path toward the school gate. Summon sorcerers along the route to exorcise them before they break through. Round 14 brings Curo, the Hollow Oracle, and round 15 brings the campaign's final boss, Kelland, the Cursed Sovereign. Defeat Kelland to unlock Endless Mode, where the two return again and again, growing stronger each time.</p>
+
+<div id="overlay">
+  <h2 id="overlayTitle">Round Complete</h2>
+  <p id="overlayText"></p>
+  <div style="display:flex; gap:10px;">
+    <button id="continueEndlessBtn" style="display:none; background:#5ee7ff; color:#10082a; padding:12px 22px; font-size:15px;">♾️ Continue: Endless Mode</button>
+    <button id="restartBtn">Restart</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const CELL = 40;
+  const COLS = canvas.width / CELL;
+  const ROWS = canvas.height / CELL;
+
+  // --- Path definition (grid coords), a snaking route across the mat ---
+  const pathCells = [];
+  (function buildPath(){
+    // Build a snake path across the grid
+    let r = 1;
+    let dir = 1;
+    for (let c = 0; c < COLS; c++){
+      // vertical run at specific columns
+    }
+    // Manually crafted snake for a clean look
+    const coords = [
+      [0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],
+      [6,2],[6,3],[6,4],
+      [5,4],[4,4],[3,4],[2,4],[1,4],
+      [1,5],[1,6],[1,7],
+      [2,7],[3,7],[4,7],[5,7],[6,7],[7,7],[8,7],[9,7],[10,7],[11,7],
+      [11,6],[11,5],[11,4],[11,3],[11,2],[11,1],
+      [12,1],[13,1],[14,1],[15,1],[16,1],[17,1],
+      [17,2],[17,3],[17,4],[17,5],[17,6],[17,7],[17,8],[17,9],[17,10],[17,11],[17,12],[17,13],
+    ];
+    coords.forEach(([c,r]) => pathCells.push({c,r}));
+  })();
+  const pathPixels = pathCells.map(p => ({x:p.c*CELL+CELL/2, y:p.r*CELL+CELL/2}));
+  const pathSet = new Set(pathCells.map(p => p.c+","+p.r));
+
+  // --- Game state ---
+  let gold = 150;
+  let hp = 20;
+  let wave = 0;
+  const MAX_WAVE = 15;
+  let endlessMode = false;
+  let towers = [];
+  let enemies = [];
+  let projectiles = [];
+  let selectedTowerType = null;
+  let selectedPlacedTower = null;
+  let waveActive = false;
+  let spawnQueue = [];
+  let spawnTimer = 0;
+  let gameOver = false;
+  let animId = null;
+
+  // Twenty original sorcerer characters, each with a distinct attack style.
+  // Roles include melee strikers, ranged snipers, splash casters, poison/curse-mark
+  // inflictors, crowd-control (slow/root), and a support sorcerer who buffs allies.
+  const TOWER_DEFS = {
+    bank:   {name:"Mei, the Fortune Weaver", icon:"💰", cost:120, range:0, dmg:0, rate:999, color:"#8a6a12", proj:"#ffd84d", slow:0, splash:0, income:14, desc:"Money maker: earns Cursed Energy every 4 seconds. Max level 5."},
+    ren:    {name:"Ren, the Vessel",        icon:"👊", cost:90,  range:75,  dmg:16, rate:18,  color:"#3a3a3a", proj:"#ff5c5c", slow:0,   splash:0,  desc:"Close-range cursed fist combos. Fast, punishing single-target damage."},
+    suzu:   {name:"Suzu, the Barrier Sage", icon:"🔮", cost:160, range:115, dmg:14, rate:60,  color:"#274a8f", proj:"#7fd6ff", slow:0.45,splash:55, desc:"Cursed-energy wave hits every curse nearby and slows them."},
+    hoshi:  {name:"Hoshi, the Flame Adept", icon:"🔥", cost:110, range:85,  dmg:6,  rate:40,  color:"#a13d1f", proj:"#ff8a3d", slow:0,   splash:0,  poison:{dps:4,ticks:40}, desc:"Marks curses with cursed flame that burns over time."},
+    kaito:  {name:"Kaito, the Ice Warden",  icon:"❄️", cost:100, range:80,  dmg:10, rate:50,  color:"#1f6f8f", proj:"#bdf2ff", slow:0.6, splash:0,  desc:"Freezing strikes that heavily slow a single curse."},
+    mio:    {name:"Mio, the Shadow Dancer", icon:"🗡️", cost:70,  range:70,  dmg:5,  rate:10,  color:"#4a2e5c", proj:"#c9a6e0", slow:0,   splash:0,  desc:"A flurry of quick shadow strikes. Cheap and relentless."},
+    daigo:  {name:"Daigo, the Iron Fist",   icon:"💥", cost:200, range:70,  dmg:55, rate:100, color:"#5c4326", proj:"#ffcf5a", slow:0,   splash:0,  desc:"A single, devastating cursed blow. Slow but brutal."},
+    yumeko: {name:"Yumeko, the Mirror Seer",icon:"🪞", cost:150, range:160, dmg:30, rate:70,  color:"#6b6b8f", proj:"#e6e6fa", slow:0,   splash:0,  desc:"Long-range precision strikes from beyond normal sight."},
+    taro:   {name:"Taro, the Storm Caller", icon:"⚡", cost:170, range:100, dmg:18, rate:45,  color:"#5a5aa0", proj:"#f4e04d", slow:0,   splash:40, desc:"Calls down a bolt that arcs to nearby curses."},
+    nao:    {name:"Nao, the Poison Whisperer",icon:"☠️",cost:120, range:90, dmg:4,  rate:35,  color:"#3d5c2e", proj:"#a3d977", slow:0,   splash:0,  poison:{dps:6,ticks:50}, desc:"A curse mark that rots foes from within."},
+    ken:    {name:"Ken, the Stone Guard",   icon:"🪨", cost:130, range:60,  dmg:35, rate:80,  color:"#6e6a5e", proj:"#c9c3a8", slow:0.3, splash:0,  desc:"Heavy grounded strikes that also slow on impact."},
+    sora:   {name:"Sora, the Wind Blade",   icon:"🌪️", cost:95,  range:75,  dmg:9,  rate:12,  color:"#3f8f6b", proj:"#a8f0d6", slow:0,   splash:0,  desc:"Blindingly fast wind-cutting slashes."},
+    rin:    {name:"Rin, the Blood Seal",    icon:"🩸", cost:190, range:95,  dmg:12, rate:55,  color:"#7a1f2b", proj:"#e05c6b", slow:0,   splash:35, poison:{dps:5,ticks:30}, desc:"A curse mark that both scars an area and festers over time."},
+    aki:    {name:"Aki, the Void Walker",   icon:"🌑", cost:220, range:110, dmg:25, rate:70,  color:"#151022", proj:"#8a6de0", slow:0,   splash:70, desc:"Tears a rift that damages every curse near the blast."},
+    haru:   {name:"Haru, the Sun Priestess",icon:"☀️", cost:140, range:0,   dmg:0,  rate:999, color:"#c98a1f", proj:"#ffe08a", slow:0,   splash:0,  aura:1.3, auraRange:100, desc:"Doesn't attack — her blessing empowers every sorcerer nearby."},
+    yuu:    {name:"Yuu, the Puppeteer",     icon:"🎭", cost:125, range:80,  dmg:7,  rate:15,  color:"#8f3f6b", proj:"#e0a6c9", slow:0,   splash:0,  desc:"Strings of cursed thread lash out in rapid succession."},
+    chika:  {name:"Chika, the Thunder Fang",icon:"🐺", cost:210, range:90,  dmg:30, rate:25,  color:"#2e2e6e", proj:"#a6c9ff", slow:0,   splash:0,  desc:"Ferocious, high-damage strikes at a brutal pace."},
+    botan:  {name:"Botan, the Root Binder", icon:"🌿", cost:135, range:85,  dmg:8,  rate:60,  color:"#2f5c2f", proj:"#8fd98f", slow:0.75,splash:0,  desc:"Cursed roots seize a single target almost to a stop."},
+    sen:    {name:"Sen, the Twin Blade",    icon:"⚔️", cost:145, range:75,  dmg:14, rate:14,  color:"#4a4a4a", proj:"#dcdcdc", slow:0,   splash:0,  desc:"Dual cursed blades strike twice as often as most sorcerers."},
+    riku:   {name:"Riku, the Abyss Diver",  icon:"🌊", cost:260, range:130, dmg:60, rate:110, color:"#0f2f4a", proj:"#4dc9e0", slow:0,   splash:90, desc:"An endgame powerhouse — massive splash devastation, slow to recharge."},
+    ame:    {name:"Ame, the Rain Sage",     icon:"🌧️", cost:115, range:100, dmg:5,  rate:45,  color:"#3a5a7a", proj:"#a6d6f0", slow:0.5, splash:30, desc:"A steady curse-rain that slows and chips away at a whole area."},
+  };
+
+  const ENEMY_DEFS = {
+    rusher: {hp:30, speed:1.6, color:"#5b2a86", bounty:8, r:11, label:"Lesser Curse"},
+    tank:   {hp:110, speed:0.8, color:"#3f2350", bounty:16, r:14, label:"Grade 1 Curse"},
+    scrambler: {hp:22, speed:2.4, color:"#8e44ad", bounty:9, r:10, label:"Cursed Spirit"},
+    boss:   {hp:600, speed:0.65, color:"#1c0f26", bounty:120, r:20, label:"Special Grade Curse", boss:true},
+    curo:   {hp:500, speed:0.55, color:"#3d1a5c", bounty:200, r:23, label:"Curo, the Hollow Oracle", boss:true},
+    kelland:{hp:800, speed:0.5,  color:"#1a0a0a", bounty:350, r:26, label:"Kelland, the Cursed Sovereign", boss:true},
+  };
+
+  Object.assign(ENEMY_DEFS.rusher,{label:'Gloom Imp',shape:'blob',color:'#7a3fb0'});
+  Object.assign(ENEMY_DEFS.scrambler,{label:'Hollow Bat',shape:'wings',color:'#c4572e'});
+  Object.assign(ENEMY_DEFS.tank,{label:'Stone Golem',shape:'square',color:'#6f7a86'});
+  Object.assign(ENEMY_DEFS.boss,{shape:'spike'});
+  Object.assign(ENEMY_DEFS.curo,{shape:'ghost'});
+  Object.assign(ENEMY_DEFS.kelland,{shape:'spike'});
+  ENEMY_DEFS.crawler={hp:55,speed:1.3,color:'#6b8f2a',bounty:11,r:12,label:'Rot Crawler',shape:'legs'};
+  ENEMY_DEFS.wisp={hp:40,speed:1.9,color:'#4fc3d9',bounty:12,r:11,label:'Ashen Wraith',shape:'ghost'};
+  ENEMY_DEFS.fiend={hp:160,speed:1.0,color:'#b0203a',bounty:24,r:15,label:'Thorn Fiend',shape:'spike'};
+  function cellFromPixel(x,y){
+    return {c: Math.floor(x/CELL), r: Math.floor(y/CELL)};
+  }
+  function isOnPath(c,r){ return pathSet.has(c+","+r); }
+  function isOccupied(c,r){ return towers.some(t => t.c===c && t.r===r); }
+
+  // --- Drawing ---
+  let bg=null, frame=0, hover=null;
+  const fx=[];
+  const rgb=h=>[1,3,5].map(k=>parseInt(h.substr(k,2),16)).join(',');
+  function glowOrb(x,y,r,c){const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(${c},.45)`);g.addColorStop(1,`rgba(${c},0)`);ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();}
+  function ring(x,y,r,st,fl){ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fillStyle=fl;ctx.fill();ctx.strokeStyle=st;ctx.lineWidth=2;ctx.stroke();}
+  function burst(x,y,c){for(let i=0;i<10;i++){const a=Math.random()*6.28,v=1+Math.random()*2.5;fx.push({k:'sp',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:22,m:22,c});}}
+  function buildBg(){
+    bg=document.createElement('canvas');bg.width=canvas.width;bg.height=canvas.height;
+    const g=bg.getContext('2d'),gr=g.createLinearGradient(0,0,0,bg.height);
+    gr.addColorStop(0,'#1a1530');gr.addColorStop(1,'#0d0b1a');g.fillStyle=gr;g.fillRect(0,0,bg.width,bg.height);
+    let sd=7;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
+    for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){
+      if(isOnPath(c,r))continue;
+      g.fillStyle=`rgba(139,92,246,${0.03+rnd()*0.05})`;g.fillRect(c*CELL+1,r*CELL+1,CELL-2,CELL-2);
+      if(rnd()<0.14){g.fillStyle='rgba(94,231,255,.18)';g.beginPath();g.arc(c*CELL+rnd()*CELL,r*CELL+rnd()*CELL,1.6,0,7);g.fill();}
+    }
+    pathCells.forEach((p,i)=>{
+      g.fillStyle='#2b2540';g.fillRect(p.c*CELL,p.r*CELL,CELL,CELL);
+      g.fillStyle='#3a3157';g.fillRect(p.c*CELL+3,p.r*CELL+3,CELL-6,CELL-6);
+      g.fillStyle='rgba(255,255,255,.05)';g.fillRect(p.c*CELL+6,p.r*CELL+6,CELL-12,3);
+      if(i%4===2){g.fillStyle='rgba(255,77,109,.55)';g.fillRect(p.c*CELL+16,p.r*CELL+11,8,18);}
+    });
+  }
+  function drawGrid(){
+    if(!bg)buildBg();frame++;
+    ctx.drawImage(bg,0,0);
+    for(let i=0;i<14;i++){const q=posAlongPath((frame*1.2+i*totalPathLength/14)%totalPathLength);ctx.fillStyle='rgba(94,231,255,.4)';ctx.beginPath();ctx.arc(q.x,q.y,2.2,0,7);ctx.fill();}
+    const s0=pathPixels[0],e0=pathPixels[pathPixels.length-1],pl=0.5+0.5*Math.sin(frame/12);
+    glowOrb(s0.x,s0.y,26+pl*6,'139,92,246');glowOrb(e0.x,e0.y,26+pl*6,'255,207,90');
+    ctx.strokeStyle='rgba(139,92,246,.9)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(s0.x,s0.y,10+pl*3,0,7);ctx.stroke();
+    ctx.fillStyle='#ffcf5a';ctx.fillRect(e0.x-12,e0.y-4,24,5);ctx.fillRect(e0.x-9,e0.y+1,4,12);ctx.fillRect(e0.x+5,e0.y+1,4,12);
+  }
+
+  function drawTowers(){
+    towers.forEach(t=>{
+      const def=TOWER_DEFS[t.type],x=t.c*CELL+CELL/2,y=t.r*CELL+CELL/2,c=rgb(def.proj);
+      if(selectedPlacedTower===t)ring(x,y,(def.aura?def.auraRange:def.range)+t.level*3,'rgba(255,207,90,.6)','rgba(255,207,90,.07)');
+      glowOrb(x,y,24+Math.sin(frame/15+t.c)*2,c);
+      ctx.save();ctx.translate(x,y);ctx.rotate(frame/60);ctx.strokeStyle=`rgba(${c},.7)`;ctx.lineWidth=1.2;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.arc(0,0,17,0,7);ctx.stroke();ctx.restore();ctx.setLineDash([]);
+      const gr=ctx.createRadialGradient(x-3,y-4,1,x,y,12);gr.addColorStop(0,def.proj);gr.addColorStop(1,def.color);
+      ctx.beginPath();ctx.arc(x,y,12,0,7);ctx.fillStyle=gr;ctx.fill();ctx.strokeStyle='rgba(255,255,255,.55)';ctx.lineWidth=1.5;ctx.stroke();
+      if(t.flash>0){t.flash--;ctx.strokeStyle=`rgba(${c},${t.flash/8})`;ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,14+(8-t.flash)*2,0,7);ctx.stroke();}
+      ctx.font='13px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';ctx.fillText(def.icon||'',x,y+1);
+      ctx.font='bold 9px sans-serif';ctx.fillStyle='#ffcf5a';ctx.fillText('Lv'+(t.level+1),x,y+20);
+    });
+    if(selectedTowerType&&hover&&hover.c>=0&&hover.r>=0&&hover.c<COLS&&hover.r<ROWS){
+      const d=TOWER_DEFS[selectedTowerType],ok=!isOnPath(hover.c,hover.r)&&!isOccupied(hover.c,hover.r),x=hover.c*CELL+CELL/2,y=hover.r*CELL+CELL/2;
+      ring(x,y,d.aura?d.auraRange:d.range,ok?'rgba(94,231,255,.7)':'rgba(255,77,109,.7)',ok?'rgba(94,231,255,.08)':'rgba(255,77,109,.08)');
+      ctx.globalAlpha=.7;ctx.font='20px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(d.icon||'',x,y);ctx.globalAlpha=1;
+    }
+  }
+
+  function bodyPath(q,r,d,w){
+    ctx.beginPath();
+    if(d.shape==='ghost'){ctx.arc(q.x,q.y-r*.2,r,Math.PI,0);for(let k=0;k<=4;k++)ctx.lineTo(q.x+r-k*r/2,q.y+r+(k%2?-4:2));ctx.closePath();}
+    else if(d.shape==='square'){ctx.rect(q.x-r,q.y-r*.9,r*2,r*1.9);}
+    else ctx.ellipse(q.x,q.y,r+w*.5,r-w*.5,0,0,7);
+  }
+  function extras(q,r,d){
+    ctx.strokeStyle=d.color;ctx.fillStyle=d.color;ctx.lineWidth=2;const sh=d.shape;
+    if(sh==='legs'){for(let k=0;k<8;k++){ctx.beginPath();ctx.moveTo(q.x,q.y);ctx.lineTo(q.x+Math.cos(k*.8)*(r+6),q.y+Math.sin(k*.8)*(r+4)+Math.sin(frame/4+k)*2);ctx.stroke();}}
+    if(sh==='wings'){const f=Math.sin(frame/3)*6;[-1,1].forEach(sd=>{ctx.beginPath();ctx.moveTo(q.x+sd*r*.6,q.y);ctx.lineTo(q.x+sd*(r+12),q.y-8+f);ctx.lineTo(q.x+sd*(r+8),q.y+6);ctx.fill();});}
+    if(sh==='spike'){for(let k=0;k<8;k++){const a=k*.785+frame/40;ctx.beginPath();ctx.moveTo(q.x+Math.cos(a-.2)*r,q.y+Math.sin(a-.2)*r);ctx.lineTo(q.x+Math.cos(a)*(r+7),q.y+Math.sin(a)*(r+7));ctx.lineTo(q.x+Math.cos(a+.2)*r,q.y+Math.sin(a+.2)*r);ctx.fill();}}
+  }
+  function drawEnemies(){
+    enemies.forEach(e=>{
+      const d=ENEMY_DEFS[e.type],q=posAlongPath(e.dist),r=d.r,w=Math.sin(frame/6+e.dist/20)*1.6;
+      ctx.fillStyle='rgba(0,0,0,.35)';ctx.beginPath();ctx.ellipse(q.x,q.y+r*.85,r*.9,r*.35,0,0,7);ctx.fill();
+      if(d.boss)glowOrb(q.x,q.y,r*2.4,e.type==='kelland'?'255,40,70':'170,90,255');
+      extras(q,r,d);bodyPath(q,r,d,w);ctx.fillStyle=d.color;ctx.fill();
+      const hg=ctx.createRadialGradient(q.x-r/3,q.y-r/3,1,q.x,q.y,r);hg.addColorStop(0,'rgba(255,255,255,.3)');hg.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=hg;ctx.fill();ctx.strokeStyle=d.boss?'#ff4d6d':'rgba(0,0,0,.6)';ctx.lineWidth=d.boss?2:1.5;ctx.stroke();
+      const ec=e.type==='kelland'?'#ff3355':'#ffe94d';ctx.fillStyle=ec;
+      ctx.beginPath();ctx.arc(q.x-r*.35,q.y-r*.1,r*.16+.6,0,7);ctx.arc(q.x+r*.35,q.y-r*.1,r*.16+.6,0,7);ctx.fill();
+      if(e.type==='kelland'){ctx.fillStyle='#ffcf5a';for(let k=-1;k<=1;k++){ctx.beginPath();ctx.moveTo(q.x+k*9-4,q.y-r+2);ctx.lineTo(q.x+k*9,q.y-r-9);ctx.lineTo(q.x+k*9+4,q.y-r+2);ctx.fill();}}
+      if(e.type==='curo'){ctx.fillStyle='#d9a6ff';for(let k=0;k<3;k++){const a=frame/20+k*2.1;ctx.beginPath();ctx.arc(q.x+Math.cos(a)*(r+8),q.y+Math.sin(a)*(r+8),3.2,0,7);ctx.fill();}}
+      if(e.slowTimer>0){ctx.strokeStyle='rgba(94,231,255,.8)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(q.x,q.y,r+3,0,7);ctx.stroke();}
+      if(e.poison&&e.poison.ticksLeft>0){ctx.fillStyle='#8fe36b';ctx.beginPath();ctx.arc(q.x+r*.6,q.y-r-3,3,0,7);ctx.fill();}
+      const bw=Math.max(r*2,20),f=Math.max(0,e.hp/e.maxHp);
+      ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(q.x-bw/2-1,q.y-r-11,bw+2,6);
+      ctx.fillStyle=f>.5?'#5ee7ff':f>.25?'#ffcf5a':'#ff4d6d';ctx.fillRect(q.x-bw/2,q.y-r-10,bw*f,4);
+    });
+  }
+
+  function drawProjectiles(){
+    projectiles.forEach(p=>{
+      if(!p.m)p.m=p.life+1;
+      const tp=enemies.includes(p.target)?posAlongPath(p.target.dist):{x:p.tx,y:p.ty},t=1-p.life/p.m,t0=Math.max(0,t-.35);
+      const X=k=>p.x+(tp.x-p.x)*k,Y=k=>p.y+(tp.y-p.y)*k;
+      ctx.strokeStyle=p.color;ctx.lineWidth=3;ctx.lineCap='round';ctx.globalAlpha=.55;
+      ctx.beginPath();ctx.moveTo(X(t0),Y(t0));ctx.lineTo(X(t),Y(t));ctx.stroke();ctx.globalAlpha=1;
+      glowOrb(X(t),Y(t),10,rgb(p.color));ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(X(t),Y(t),2.6,0,7);ctx.fill();
+    });
+    for(let i=fx.length-1;i>=0;i--){
+      const f=fx[i];f.life--;if(f.life<=0){fx.splice(i,1);continue;}
+      const a=f.life/f.m;
+      if(f.k==='sp'){f.x+=f.vx;f.y+=f.vy;f.vx*=.94;f.vy*=.94;ctx.globalAlpha=a;ctx.fillStyle=f.c;ctx.beginPath();ctx.arc(f.x,f.y,2.5*a+.5,0,7);ctx.fill();}
+      else if(f.k==='ring'){ctx.globalAlpha=a*.8;ctx.strokeStyle=f.c;ctx.lineWidth=3*a+1;ctx.beginPath();ctx.arc(f.x,f.y,f.r*(1-a*.8),0,7);ctx.stroke();}
+      else{f.y-=.6;ctx.globalAlpha=Math.min(1,a*1.5);ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='#10082a';ctx.strokeText(f.v,f.x,f.y);ctx.fillStyle='#fff';ctx.fillText(f.v,f.x,f.y);}
+      ctx.globalAlpha=1;
+    }
+  }
+
+  function posAlongPath(dist){
+    // dist is distance traveled in pixels along pathPixels polyline
+    let remaining = dist;
+    for(let i=0;i<pathPixels.length-1;i++){
+      const a = pathPixels[i], b = pathPixels[i+1];
+      const segLen = Math.hypot(b.x-a.x, b.y-a.y);
+      if (remaining <= segLen){
+        const t = segLen === 0 ? 0 : remaining/segLen;
+        return {x: a.x+(b.x-a.x)*t, y: a.y+(b.y-a.y)*t};
+      }
+      remaining -= segLen;
+    }
+    return pathPixels[pathPixels.length-1];
+  }
+  const totalPathLength = (()=>{
+    let len=0;
+    for(let i=0;i<pathPixels.length-1;i++){
+      len += Math.hypot(pathPixels[i+1].x-pathPixels[i].x, pathPixels[i+1].y-pathPixels[i].y);
+    }
+    return len;
+  })();
+
+  // --- Wave generation ---
+  function buildWave(n){
+    const q = [];
+    const count = 6 + n*2;
+    for(let i=0;i<count;i++){
+      let type = "rusher";
+      const roll = Math.random();
+      if (n > 2 && roll < 0.25) type = "scrambler";
+      if(n>1&&roll>0.55&&roll<=0.7)type="crawler";if(n>3&&roll>0.7&&roll<=0.8)type="wisp";if(n>4&&roll>0.8&&roll<=0.92)type="tank";if(n>6&&roll>0.92)type="fiend";
+      q.push({type, delay: i*40});
+    }
+    if (n === 14){
+      // Second-to-last boss of the main campaign
+      q.push({type:"curo", delay: count*40 + 60});
+    } else if (n === 15){
+      // Final boss of the main campaign
+      q.push({type:"kelland", delay: count*40 + 60});
+    } else if (n > 15 && n % 5 === 0){
+      // Endless mode: Curo and Kelland return, alternating, as recurring superbosses
+      const rematchType = (n / 5) % 2 === 0 ? "kelland" : "curo";
+      q.push({type: rematchType, delay: count*40 + 60});
+    } else if (n % 5 === 0){
+      q.push({type:"boss", delay: count*40 + 60});
+    }
+    return q;
+  }
+
+  function startWave(){
+    if (waveActive || gameOver) return;
+    wave++;
+    document.getElementById('wave').textContent = `${wave} / ${endlessMode ? '∞' : MAX_WAVE}`;
+    spawnQueue = buildWave(wave);
+    spawnTimer = 0;
+    waveActive = true;
+    document.getElementById('startWaveBtn').disabled = true;
+  }
+
+  function spawnEnemy(type){
+    const def = ENEMY_DEFS[type];
+    const scale = Math.pow(1.14, wave-1);
+    enemies.push({
+      type,
+      hp: def.hp*scale,
+      maxHp: def.hp*scale,
+      speed: def.speed*Math.min(1+wave*0.02,1.7),
+      dist: 0,
+      slowTimer: 0,
+    });
+  }
+
+  // --- Combat update ---
+  function update(){
+    if (gameOver) return;
+
+    // spawn
+    if (spawnQueue.length){
+      spawnTimer++;
+      while(spawnQueue.length && spawnQueue[0].delay <= spawnTimer){
+        spawnEnemy(spawnQueue.shift().type);
+      }
+    } else if (waveActive && enemies.length === 0){
+      // wave complete
+      waveActive = false;
+      const bonus = 40 + wave*8;
+      gold += bonus;
+      updateHUD();
+      if (wave >= MAX_WAVE && !endlessMode){
+        endGame(true);
+        return;
+      } else {
+        showRoundBanner(bonus);
+        document.getElementById('startWaveBtn').disabled = false;
+      }
+    }
+
+    // move enemies + tick poison/curse marks
+    enemies.forEach(e=>{
+      let spd = e.speed;
+      if (e.slowTimer > 0){ spd *= 0.5; e.slowTimer--; }
+      e.dist += spd;
+      if (e.poison && e.poison.ticksLeft > 0){
+        e.hp -= e.poison.dps;
+        e.poison.ticksLeft--;
+      }
+    });
+    // remove enemies killed by poison/curse marks
+    enemies = enemies.filter(e=>{
+      if (e.hp <= 0){
+        const def = ENEMY_DEFS[e.type];
+        gold += Math.round(def.bounty*(1+wave*0.08));
+        return false;
+      }
+      return true;
+    });
+    updateHUD();
+    // remove enemies that reached the end
+    enemies = enemies.filter(e=>{
+      if (e.dist >= totalPathLength){
+        hp -= (e.type==="kelland" ? 12 : e.type==="curo" ? 8 : e.type==="boss" ? 5 : 1);
+        updateHUD();
+        if (hp <= 0){ endGame(false); }
+        return false;
+      }
+      return true;
+    });
+
+    // towers fire
+    towers.forEach(t=>{
+      const def = TOWER_DEFS[t.type];
+      if(def.income){t.inc=(t.inc||0)+1;if(t.inc>=240){t.inc=0;const g=Math.round(def.income*(1+0.6*t.level));gold+=g;fx.push({k:'num',x:t.c*CELL+20,y:t.r*CELL,v:'+'+g,life:50,m:50});updateHUD();}return;}
+      if (def.dmg <= 0) return;
+      t.cooldown = (t.cooldown||0) - 1;
+      if (t.cooldown > 0) return;
+      const tx = t.c*CELL+CELL/2, ty = t.r*CELL+CELL/2;
+      const range = def.range + t.level*3;
+      let target = null;
+      let bestDist = -1;
+      enemies.forEach(e=>{
+        const pos = posAlongPath(e.dist);
+        const d = Math.hypot(pos.x-tx, pos.y-ty);
+        if (d <= range && e.dist > bestDist){
+          bestDist = e.dist;
+          target = e;
+        }
+      });
+      if (target){
+        const pos = posAlongPath(target.dist);
+        const auraMult = 1 + auraBonusFor(t, tx, ty);
+        projectiles.push({
+          x: tx, y: ty, tx: pos.x, ty: pos.y,
+          color: def.proj, target, dmg: def.dmg*(1+0.5*t.level)*auraMult, slow: def.slow, splash: def.splash, poison: def.poison,
+          life: 8
+        });
+        t.cooldown = Math.max(6, def.rate*Math.pow(0.93,t.level)); t.flash = 8;
+      }
+    });
+
+    // move projectiles (instant-ish, resolve on life end)
+    projectiles.forEach(p=>{
+      p.life--;
+    });
+    projectiles = projectiles.filter(p=>{
+      if (p.life <= 0){
+        resolveHit(p);
+        return false;
+      }
+      return true;
+    });
+
+    render();
+    animId = requestAnimationFrame(update);
+  }
+
+  function auraBonusFor(t, tx, ty){
+    let bonus = 0;
+    towers.forEach(o=>{
+      if (o === t) return;
+      const odef = TOWER_DEFS[o.type];
+      if (!odef.aura) return;
+      const ox = o.c*CELL+CELL/2, oy = o.r*CELL+CELL/2;
+      const range = odef.auraRange + o.level*3;
+      if (Math.hypot(tx-ox, ty-oy) <= range){
+        bonus += (odef.aura - 1) * (1 + 0.15*o.level);
+      }
+    });
+    return bonus;
+  }
+
+  function resolveHit(p){
+    if (!enemies.includes(p.target)) return; // already dead
+    applyDamage(p.target, p.dmg);
+    if (p.poison){ p.target.poison = {dps: p.poison.dps, ticksLeft: p.poison.ticks}; }
+    if (p.slow > 0){ p.target.slowTimer = 60; }
+    if (p.splash > 0){
+      const pos = posAlongPath(p.target.dist);
+      fx.push({k:'ring',x:pos.x,y:pos.y,r:p.splash,life:18,m:18,c:p.color});
+      enemies.forEach(e=>{
+        if (e === p.target) return;
+        const epos = posAlongPath(e.dist);
+        if (Math.hypot(epos.x-pos.x, epos.y-pos.y) <= p.splash){
+          applyDamage(e, p.dmg*0.5);
+        }
+      });
+    }
+  }
+
+  function applyDamage(e, dmg){
+    e.hp -= dmg;
+    {const q=posAlongPath(e.dist); fx.push({k:'num',x:q.x,y:q.y-12,v:Math.round(dmg),life:30,m:30}); if(e.hp<=0) burst(q.x,q.y,ENEMY_DEFS[e.type].color);}
+    if (e.hp <= 0 && enemies.includes(e)){
+      const def = ENEMY_DEFS[e.type];
+      gold += Math.round(def.bounty*(1+wave*0.08));
+      enemies = enemies.filter(x=>x!==e);
+      updateHUD();
+    }
+  }
+
+  function render(){
+    drawGrid();
+    drawTowers();
+    drawEnemies();
+    drawProjectiles();
+  }
+
+  function updateHUD(){
+    document.getElementById('gold').textContent = gold;
+    document.getElementById('hp').textContent = Math.max(0,hp);
+    document.getElementById('wave').textContent = `${wave} / ${endlessMode ? '∞' : MAX_WAVE}`;
+    Object.keys(TOWER_DEFS).forEach(k=>{
+      document.getElementById('btn-'+k).disabled = gold < TOWER_DEFS[k].cost;
+    });
+  }
+
+  function showRoundBanner(bonus){
+    // subtle transient message via title flash (kept simple, no blocking overlay)
+    const label = document.getElementById('selectedInfo');
+    const old = label.textContent;
+    let msg = `Round ${wave} cleared! +${bonus} Cursed Energy.`;
+    if (wave === 14) msg = `Curo, the Hollow Oracle has fallen! +${bonus} Cursed Energy.`;
+    else if (wave > 15 && (wave % 5 === 0)) msg = `A rematch is turned back! +${bonus} Cursed Energy.`;
+    label.textContent = msg;
+    setTimeout(()=>{ if(!selectedPlacedTower) label.textContent = "Click a summoned sorcerer to inspect."; }, 2500);
+  }
+
+  function endGame(win){
+    gameOver = true;
+    cancelAnimationFrame(animId);
+    document.getElementById('overlay').style.display = 'flex';
+    const continueBtn = document.getElementById('continueEndlessBtn');
+    if (win && !endlessMode){
+      document.getElementById('overlayTitle').textContent = "🏆 Kelland Has Fallen!";
+      document.getElementById('overlayText').textContent = `You defeated Kelland, the Cursed Sovereign, and defended the school with ${Math.max(0,hp)} HP remaining. Push further in Endless Mode?`;
+      continueBtn.style.display = 'inline-block';
+    } else {
+      continueBtn.style.display = 'none';
+      document.getElementById('overlayTitle').textContent = win ? "🏆 Academy Defended!" : "💥 The Academy Fell";
+      document.getElementById('overlayText').textContent = win
+        ? `You survived all ${MAX_WAVE} rounds with ${Math.max(0,hp)} HP remaining.`
+        : endlessMode
+          ? `You held the gate through round ${wave} in Endless Mode before it gave out.`
+          : `You made it to round ${wave} before the school gate gave out.`;
+    }
+  }
+
+  // --- Input ---
+  function maxLv(t){return TOWER_DEFS[t].income?4:19;}
+  function buildTowerButtons(){
+    const container = document.getElementById('towerList');
+    container.innerHTML = '';
+    Object.keys(TOWER_DEFS).forEach(key=>{
+      const def = TOWER_DEFS[key];
+      const btn = document.createElement('button');
+      btn.className = 'tower-btn';
+      btn.dataset.tower = key;
+      btn.id = 'btn-'+key; btn.style.borderLeft='5px solid '+def.proj;
+      btn.innerHTML = `<span class="tower-name">${def.icon||''} ${def.name} — ${def.cost}</span><span class="tower-info">${def.desc}</span>`;
+      btn.addEventListener('click', ()=>{
+        if (selectedTowerType === key){
+          selectedTowerType = null;
+          btn.classList.remove('selected');
+        } else {
+          document.querySelectorAll('.tower-btn').forEach(b=>b.classList.remove('selected'));
+          selectedTowerType = key;
+          btn.classList.add('selected');
+        }
+        selectedPlacedTower = null;
+        updateSelectedInfoPanel();
+      });
+      container.appendChild(btn);
+    });
+  }
+
+  canvas.addEventListener('click', (ev)=>{
+    if (gameOver) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (ev.clientX - rect.left) * (canvas.width/rect.width);
+    const y = (ev.clientY - rect.top) * (canvas.height/rect.height);
+    const {c,r} = cellFromPixel(x,y);
+    if (c<0||r<0||c>=COLS||r>=ROWS) return;
+
+    // check if clicking an existing tower
+    const existing = towers.find(t=>t.c===c && t.r===r);
+    if (existing){
+      selectedPlacedTower = existing;
+      selectedTowerType = null;
+      document.querySelectorAll('.tower-btn').forEach(b=>b.classList.remove('selected'));
+      updateSelectedInfoPanel();
+      return;
+    }
+
+    if (selectedTowerType){
+      if (isOnPath(c,r)){ flashInfo("Can't summon on the curse path — pick an open tile."); return; }
+      if (isOccupied(c,r)) return;
+      const def = TOWER_DEFS[selectedTowerType];
+      if (gold < def.cost){ flashInfo("Not enough Cursed Energy."); return; }
+      gold -= def.cost;
+      towers.push({type:selectedTowerType, c, r, level:0, cooldown:0});
+      updateHUD();
+    } else {
+      selectedPlacedTower = null;
+      updateSelectedInfoPanel();
+    }
+  });
+
+  function flashInfo(msg){
+    const label = document.getElementById('selectedInfo');
+    label.textContent = msg;
+    setTimeout(()=>{ if(!selectedPlacedTower) label.textContent = "Click a summoned sorcerer to inspect."; }, 1800);
+  }
+
+  function updateSelectedInfoPanel(){
+    const label = document.getElementById('selectedInfo');
+    const upgradeBtn = document.getElementById('upgradeBtn');
+    const sellBtn = document.getElementById('sellBtn');
+    if (selectedPlacedTower){
+      const def = TOWER_DEFS[selectedPlacedTower.type];
+      const upgradeCost = Math.round(def.cost * 0.6 * (selectedPlacedTower.level+1));
+      const statLine = def.income ? `Income: +${Math.round(def.income*(1+0.6*selectedPlacedTower.level))} per 4s | Max Lv 5` : def.aura
+        ? `Aura Boost: +${Math.round((def.aura-1)*100*(1+0.15*selectedPlacedTower.level))}% dmg | Aura Range: ${def.auraRange + selectedPlacedTower.level*3}`
+        : `Damage: ${(def.dmg*(1+0.5*selectedPlacedTower.level)).toFixed(0)} | Range: ${def.range + selectedPlacedTower.level*3}`;
+      label.textContent = `${def.name} — Level ${selectedPlacedTower.level+1}\n${statLine}`;
+      upgradeBtn.style.display = 'block';
+      upgradeBtn.textContent = `⬆ Upgrade (${upgradeCost})`;
+      upgradeBtn.disabled = gold < upgradeCost || selectedPlacedTower.level >= maxLv(selectedPlacedTower.type);
+      if (selectedPlacedTower.level >= maxLv(selectedPlacedTower.type)) upgradeBtn.textContent = "Max Level";
+      sellBtn.style.display = 'block';
+      sellBtn.textContent = `💰 Sell (+${Math.round(def.cost*0.5*(selectedPlacedTower.level+1))})`;
+    } else if (selectedTowerType){
+      const def = TOWER_DEFS[selectedTowerType];
+      label.textContent = `${def.name} selected — click an open tile off the curse path to place (Cost: ${def.cost}).`;
+      upgradeBtn.style.display = 'none';
+      sellBtn.style.display = 'none';
+    } else {
+      label.textContent = "Click a summoned sorcerer to inspect.";
+      upgradeBtn.style.display = 'none';
+      sellBtn.style.display = 'none';
+    }
+  }
+
+  document.getElementById('upgradeBtn').addEventListener('click', ()=>{
+    if (!selectedPlacedTower) return;
+    const def = TOWER_DEFS[selectedPlacedTower.type];
+    const cost = Math.round(def.cost * 0.6 * (selectedPlacedTower.level+1));
+    if (gold >= cost && selectedPlacedTower.level < maxLv(selectedPlacedTower.type)){
+      gold -= cost;
+      selectedPlacedTower.level++;
+      updateHUD();
+      updateSelectedInfoPanel();
+    }
+  });
+
+  document.getElementById('sellBtn').addEventListener('click', ()=>{
+    if (!selectedPlacedTower) return;
+    const def = TOWER_DEFS[selectedPlacedTower.type];
+    gold += Math.round(def.cost*0.5*(selectedPlacedTower.level+1));
+    towers = towers.filter(t=>t!==selectedPlacedTower);
+    selectedPlacedTower = null;
+    updateHUD();
+    updateSelectedInfoPanel();
+  });
+
+  document.getElementById('startWaveBtn').addEventListener('click', startWave);
+
+  document.getElementById('restartBtn').addEventListener('click', ()=>{
+    gold = 150; hp = 20; wave = 0; towers = []; enemies = []; projectiles = [];
+    selectedTowerType = null; selectedPlacedTower = null; waveActive = false;
+    spawnQueue = []; spawnTimer = 0; gameOver = false; endlessMode = false;
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('startWaveBtn').disabled = false;
+    document.querySelectorAll('.tower-btn').forEach(b=>b.classList.remove('selected'));
+    updateHUD();
+    updateSelectedInfoPanel();
+    render();
+    animId = requestAnimationFrame(update);
+  });
+
+  document.getElementById('continueEndlessBtn').addEventListener('click', ()=>{
+    endlessMode = true;
+    gameOver = false;
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('startWaveBtn').disabled = false;
+    updateHUD();
+    render();
+    animId = requestAnimationFrame(update);
+  });
+
+  canvas.addEventListener('mousemove',ev=>{const r=canvas.getBoundingClientRect();hover=cellFromPixel((ev.clientX-r.left)*canvas.width/r.width,(ev.clientY-r.top)*canvas.height/r.height);});
+  canvas.addEventListener('mouseleave',()=>{hover=null;});
+  // init
+  buildTowerButtons();
+  updateHUD();
+  render();
+  animId = requestAnimationFrame(update);
+})();
+</script>
+</body>
+</html>
